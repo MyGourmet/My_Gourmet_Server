@@ -35,16 +35,18 @@ def get_decimal_from_dms(dms, ref):
 
 
 def get_lat_lon(exif):
-    geotags = get_geotagging(exif)
-    lat = get_decimal_from_dms(geotags["GPSLatitude"], geotags["GPSLatitudeRef"])
-    lon = get_decimal_from_dms(geotags["GPSLongitude"], geotags["GPSLongitudeRef"])
-
-    return (lat, lon)
+    try:
+        geotags = get_geotagging(exif)
+        lat = get_decimal_from_dms(geotags["GPSLatitude"], geotags["GPSLatitudeRef"])
+        lon = get_decimal_from_dms(geotags["GPSLongitude"], geotags["GPSLongitudeRef"])
+        return (lat, lon)
+    except KeyError as e:
+        raise KeyError(f"Key error during geotag extraction: {e}")
 
 
 def find_nearby_restaurants(image_name, lat, lon, api_key):
     gmaps = googlemaps.Client(key=api_key)
-    places = gmaps.places_nearby(location=(lat, lon), radius=15, type="restaurant")
+    places = gmaps.places_nearby(location=(lat, lon), radius=20, type="restaurant")
     print(f"Image: {image_name}")
     print("Nearby Restaurants:")
     for place in places["results"]:
@@ -53,13 +55,16 @@ def find_nearby_restaurants(image_name, lat, lon, api_key):
 
 
 def process_image(image_path, api_key):
-    image = Image.open(image_path)
-    exif_data = image._getexif()
-    if exif_data:
-        lat, lon = get_lat_lon(exif_data)
-        find_nearby_restaurants(
-            image_path, lat, lon, api_key
-        )  # Include the image name here
+    try:
+        image = Image.open(image_path)
+        exif_data = image._getexif()
+        if exif_data:
+            lat, lon = get_lat_lon(exif_data)
+            find_nearby_restaurants(image_path, lat, lon, api_key)
+        else:
+            print(f"No EXIF data found for {image_path}. Skipping...")
+    except (AttributeError, KeyError) as e:
+        print(f"Could not retrieve location data for {image_path}: {e}. Skipping...")
 
 
 def main():
