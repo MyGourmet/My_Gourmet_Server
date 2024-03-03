@@ -11,7 +11,7 @@ terraform {
 # Use separate credentials for dev-gcf-v2-sourcesthe development environment if necessary
 provider "google-beta" {
   user_project_override = true
-  credentials           = file("my-gourmet-dev-ae2e43386339.json")
+  credentials           = file("my-gourmet-dev-f5b45-b6daba966c24.json")
 }
 
 provider "google-beta" {
@@ -24,20 +24,19 @@ resource "google_firebase_project" "default" {
   project  = var.project_id
 }
 
-# Ensure bucket names are unique for the development environment
-resource "google_firebase_storage_bucket" "default" {
-  provider  = google-beta
-  project   = var.project_id
-  bucket_id = "my-gourmet-dev.appspot.com"
-}
-
 resource "google_storage_bucket" "default" {
   provider = google-beta
   project  = var.project_id
-  name     = "dev-model-jp-my-gourmet-image-classification-2023-1230"
+  name     = "dev-model-jp-my-gourmet-image-classification-2024-0204"
   location = var.region
 
   public_access_prevention = "enforced"
+}
+
+resource "google_firebase_storage_bucket" "default" {
+  provider  = google-beta
+  project   = var.project_id
+  bucket_id = google_storage_bucket.default.id
 }
 
 // cloudfunctionsは普通に手でやってもいいかも
@@ -70,14 +69,15 @@ resource "google_storage_bucket" "default" {
 #   }
 # }
 
+#ここをコメントアウトしたのが、エラーの原因
 # The caller does not have permission
-# resource "google_firestore_database" "default" {
-#   provider    = google-beta
-#   project     = var.project_id
-#   type        = "FIRESTORE_NATIVE"
-#   location_id = var.region
-#   name        = "(default)"
-# }
+resource "google_firestore_database" "default" {
+  provider    = google-beta
+  project     = var.project_id
+  type        = "FIRESTORE_NATIVE"
+  location_id = var.region
+  name        = "(default)"
+}
 
 # Update android app configurations for development
 resource "google_firebase_android_app" "default" {

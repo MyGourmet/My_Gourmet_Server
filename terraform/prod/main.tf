@@ -26,12 +26,6 @@ resource "google_firebase_project" "default" {
   project  = var.project_id
 }
 
-resource "google_firebase_storage_bucket" "default" {
-  provider  = google-beta
-  project   = var.project_id
-  bucket_id = "my-gourmet-160fb.appspot.com"
-}
-
 resource "google_storage_bucket" "default" {
   provider = google-beta
   project  = var.project_id
@@ -39,6 +33,12 @@ resource "google_storage_bucket" "default" {
   location = var.region
 
   public_access_prevention = "enforced"
+}
+
+resource "google_firebase_storage_bucket" "default" {
+  provider  = google-beta
+  project   = var.project_id
+  bucket_id = google_storage_bucket.default.id
 }
 
 resource "google_cloudfunctions2_function" "default" {
