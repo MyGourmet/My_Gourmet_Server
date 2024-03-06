@@ -6,8 +6,7 @@ from firebase_admin import credentials, initialize_app  # type: ignore
 # First Party Library
 from api.routers import task  # type: ignore
 
-cred = credentials.Certificate("/auth/service_account.json")
-initialize_app(cred)
+initialize_app(credentials.Certificate("/auth/service_account.json"))
 
 app = FastAPI()
 app.include_router(task.router)

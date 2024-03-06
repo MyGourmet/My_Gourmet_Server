@@ -20,7 +20,7 @@ FROM builder as production
 WORKDIR /src
 
 # サービスアカウントのJSONファイルをコピー
-COPY ./auth/service_account.json /auth/service_account.json
+COPY ./auth/dev/service_account.json /auth/service_account.json
 
 # デプロイ前に必要
 COPY api api

@@ -24,7 +24,7 @@ logging.basicConfig(level=logging.INFO)
 app = FastAPI()
 
 # Constants
-MODEL_BUCKET_NAME = "model-jp-my-gourmet-image-classification-2023-08"
+MODEL_BUCKET_NAME = os.getenv("MODEL_BUCKET_NAME","model-jp-my-gourmet-image-classification-2023-08")
 GCS_PREFIX = "photo-jp-my-gourmet-image-classification-2023-08"
 PROJECT = os.getenv("GCP_PROJECT", "default-project")
 READY_FOR_USE = "readyForUse"
