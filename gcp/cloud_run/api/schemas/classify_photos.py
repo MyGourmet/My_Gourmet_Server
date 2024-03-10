@@ -200,20 +200,37 @@ def extract_datetime_from_id(document_id: str) -> datetime:
     return date_time_obj
 
 
-def save_image(
-    user_id: str, access_token: str, db, storage_client
-) -> Dict[str, str]:
+# 認証処理
+def authenticate_user(access_token: str, user_id: str):
     if not access_token:
-        raise HTTPException(
-            status_code=401,
-            detail="not provided AccessToken",
-        )
-
+        raise HTTPException(status_code=401, detail="AccessToken not provided")
     if not user_id:
-        raise HTTPException(status_code=400, detail="not provided userId")
+        raise HTTPException(status_code=400, detail="userId not provided")
     logging.info(
         f"Processing saveImage request for user: {user_id} with accessToken: [REDACTED]"
     )
+
+
+# # 画像分類の初期化
+# def initialize_classifier(storage_client):
+#     bucket = storage_client.bucket(PROJECT)
+#     model_bucket = storage_client.bucket(MODEL_BUCKET_NAME)
+#     _, model_local_path = tempfile.mkstemp()
+#     blob_model = model_bucket.blob("gourmet_cnn_vgg_final.tflite")
+#     blob_model.download_to_filename(model_local_path)
+#     interpreter = tf.lite.Interpreter(model_path=model_local_path)
+#     interpreter.allocate_tensors()
+#     return (
+#         interpreter,
+#         interpreter.get_input_details(),
+#         interpreter.get_output_details(),
+#     )
+
+
+def process_images(access_token: str, user_id: str, db, storage_client):
+    # interpreter, input_details, output_details = initialize_classifier(
+    #     storage_client
+    # )
 
     # この辺あとでリファクタ
     image_size = 224
@@ -341,9 +358,17 @@ def save_image(
         if not next_token:
             break
 
+
+def save_image(
+    user_id: str, access_token: str, db, storage_client
+) -> Dict[str, str]:
+    authenticate_user(access_token, user_id)
+    process_images(access_token, user_id, db, storage_client)
     # 処理が終わったら最後のアクセス時刻を更新
     # user_doc_ref.set({"lastAccessed": datetime.now(timezone.utc)}, merge=True)
-    user_doc_ref.update({"classifyPhotosStatus": READY_FOR_USE})
+    db.collection("users").document(user_id).update(
+        {"classifyPhotosStatus": READY_FOR_USE}
+    )
     return {"message": "Successfully processed photos"}
 
 
