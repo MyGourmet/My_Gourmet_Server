@@ -61,7 +61,6 @@ def classify_image(
     interpreter: tf.lite.Interpreter,
     input_details: Any,
     output_details: Any,
-    image_size: int = 224,
 ) -> Tuple[Optional[int], Optional[bytes]]:
     logging.info(f"Starting classification for image: {url}")
     try:
@@ -79,7 +78,7 @@ def classify_image(
         with open(temp_local_path, "wb") as f:
             f.write(response.content)
 
-        img = load_img(temp_local_path, target_size=(image_size, image_size))
+        img = load_img(temp_local_path, target_size=(224, 224))
         x = img_to_array(img)
         x /= 255.0
         x = np.expand_dims(x, axis=0)
@@ -211,29 +210,8 @@ def authenticate_user(access_token: str, user_id: str):
     )
 
 
-# # 画像分類の初期化
-# def initialize_classifier(storage_client):
-#     bucket = storage_client.bucket(PROJECT)
-#     model_bucket = storage_client.bucket(MODEL_BUCKET_NAME)
-#     _, model_local_path = tempfile.mkstemp()
-#     blob_model = model_bucket.blob("gourmet_cnn_vgg_final.tflite")
-#     blob_model.download_to_filename(model_local_path)
-#     interpreter = tf.lite.Interpreter(model_path=model_local_path)
-#     interpreter.allocate_tensors()
-#     return (
-#         interpreter,
-#         interpreter.get_input_details(),
-#         interpreter.get_output_details(),
-#     )
-
-
-def process_images(access_token: str, user_id: str, db, storage_client):
-    # interpreter, input_details, output_details = initialize_classifier(
-    #     storage_client
-    # )
-
-    # この辺あとでリファクタ
-    image_size = 224
+# 画像分類の初期化
+def initialize_classifier(storage_client):
     bucket = storage_client.bucket(PROJECT)
     model_bucket = storage_client.bucket(MODEL_BUCKET_NAME)
     _, model_local_path = tempfile.mkstemp()
@@ -241,8 +219,19 @@ def process_images(access_token: str, user_id: str, db, storage_client):
     blob_model.download_to_filename(model_local_path)
     interpreter = tf.lite.Interpreter(model_path=model_local_path)
     interpreter.allocate_tensors()
-    input_details = interpreter.get_input_details()
-    output_details = interpreter.get_output_details()
+    return (
+        bucket,
+        interpreter,
+        interpreter.get_input_details(),
+        interpreter.get_output_details(),
+    )
+
+
+def process_images(access_token: str, user_id: str, db, storage_client):
+    bucket, interpreter, input_details, output_details = initialize_classifier(
+        storage_client
+    )
+
     classes = [
         "ramen",
         "japanese_food",
@@ -252,10 +241,8 @@ def process_images(access_token: str, user_id: str, db, storage_client):
     ]
 
     # Firestoreの更新ロジック
-    users_ref = db.collection("users")
-    user_doc_ref = users_ref.document(user_id)
     photo_count = 0
-
+    user_doc_ref = db.collection("users").document(user_id)
     photos_ref = user_doc_ref.collection("photos")
     photos_doc_snapshot = photos_ref.limit(1).get()
     has_fetched_before = any(photos_doc_snapshot)
@@ -307,7 +294,6 @@ def process_images(access_token: str, user_id: str, db, storage_client):
                 interpreter,
                 input_details,
                 output_details,
-                image_size,
             )
             # predictedがNoneでないことを確認してからリストをインデックス参照する
             if (
@@ -359,13 +345,9 @@ def process_images(access_token: str, user_id: str, db, storage_client):
             break
 
 
-def save_image(
-    user_id: str, access_token: str, db, storage_client
-) -> Dict[str, str]:
+def save_image(user_id: str, access_token: str, db, storage_client):
     authenticate_user(access_token, user_id)
     process_images(access_token, user_id, db, storage_client)
-    # 処理が終わったら最後のアクセス時刻を更新
-    # user_doc_ref.set({"lastAccessed": datetime.now(timezone.utc)}, merge=True)
     db.collection("users").document(user_id).update(
         {"classifyPhotosStatus": READY_FOR_USE}
     )
