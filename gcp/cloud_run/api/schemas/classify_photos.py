@@ -4,7 +4,7 @@ import os
 import tempfile
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, Union
 
 # Third Party Library
 import numpy as np  # type: ignore
@@ -32,6 +32,17 @@ PROJECT = os.getenv("GCP_PROJECT", "default-project")
 READY_FOR_USE = "readyForUse"
 
 
+# 認証処理
+def authenticate_user(access_token: str, user_id: str):
+    if not access_token:
+        raise HTTPException(status_code=401, detail="AccessToken not provided")
+    if not user_id:
+        raise HTTPException(status_code=400, detail="userId not provided")
+    logging.info(
+        f"Processing saveImage request for user: {user_id} with accessToken: [REDACTED]"
+    )
+
+
 def get_photos_from_google_photo_api(
     access_token: str, page_size: int, next_page_token: Optional[str] = None
 ) -> Dict[str, Any]:
@@ -54,6 +65,23 @@ def get_photos_from_google_photo_api(
     except requests.RequestException as e:
         logging.error(f"Request failed: {e}")
         return {}
+
+
+# 画像分類の初期化
+def initialize_classifier(storage_client):
+    bucket = storage_client.bucket(PROJECT)
+    model_bucket = storage_client.bucket(MODEL_BUCKET_NAME)
+    _, model_local_path = tempfile.mkstemp()
+    blob_model = model_bucket.blob("gourmet_cnn_vgg_final.tflite")
+    blob_model.download_to_filename(model_local_path)
+    interpreter = tf.lite.Interpreter(model_path=model_local_path)
+    interpreter.allocate_tensors()
+    return (
+        bucket,
+        interpreter,
+        interpreter.get_input_details(),
+        interpreter.get_output_details(),
+    )
 
 
 def classify_image(
@@ -128,12 +156,7 @@ def save_to_cloud_storage(
         )
 
 
-def save_to_firestore(
-    image_url: str,
-    shot_at: datetime,
-    user_id: str,
-    db,
-) -> Tuple[bool, str]:
+def save_to_firestore(image_url: str, shot_at: datetime, user_id: str, db):
     logging.info(f"Preparing to save image URL to Firestore: {image_url}")
     try:
         # Firestoreに保存するデータを作成
@@ -152,14 +175,18 @@ def save_to_firestore(
         user_ref = db.collection("users").document(user_id)
         doc_id = shot_at.strftime("%Y%m%d_%H%M%S")
         user_ref.collection("photos").document(doc_id).set(photo_data)
-
-        return True, "Firestore update successful"
     except Exception as e:
         logging.error(f"An error occurred while saving to Firestore: {e}")
         raise HTTPException(
             status_code=500,
             detail="An error occurred while saving to Firestore: {e}",
         )
+
+
+def update_user_doc_status(user_id: str, db):
+    db.collection("users").document(user_id).update(
+        {"classifyPhotosStatus": READY_FOR_USE}
+    )
 
 
 def get_latest_document_id(user_id: str, db) -> str:
@@ -172,21 +199,19 @@ def get_latest_document_id(user_id: str, db) -> str:
     return latest_photo_id
 
 
-# def get_latest_photo_datetime(user_id: str, db) -> datetime:
-#     # ユーザーの最新の写真の情報を取得
-#     photos_ref = db.collection("users").document(user_id).collection("photos")
-#     # IDに基づいて最新のドキュメントを取得
-#     latest_photos = (
-#         photos_ref.order_by("__name__", direction="DESCENDING").limit(1).get()
-#     )
-#     latest_photo = list(latest_photos)
-
-#     # 写真が存在する場合はそのタイムスタンプを、存在しない場合は現在時刻を使用
-#     if latest_photo:
-#         return latest_photo[0].to_dict()["createdAt"]
-#     else:
-#         # Firestoreのタイムスタンプはdatetimeオブジェクトとして取得されます
-#         return datetime.now(timezone.utc)
+def filter_photo(
+    photo,
+) -> Union[False, datetime]:
+    """写真が処理対象かどうかを判断する。"""
+    if "screenshot" in photo["filename"].lower():
+        return False
+    shot_at = photo.get("mediaMetadata", {}).get("creationTime")
+    if not shot_at:
+        logging.info(
+            f"No shot_at time for photo {photo['filename']}. Skipping."
+        )
+        return False
+    return datetime.strptime(shot_at, "%Y-%m-%dT%H:%M:%S%z")
 
 
 # 以下の関数は、取得した最新のドキュメントIDから日時情報を抽出します
@@ -197,34 +222,6 @@ def extract_datetime_from_id(document_id: str) -> datetime:
     # 文字列からdatetimeオブジェクトを作成
     date_time_obj = datetime.strptime(date_time_str, "%Y%m%d %H%M%S")
     return date_time_obj
-
-
-# 認証処理
-def authenticate_user(access_token: str, user_id: str):
-    if not access_token:
-        raise HTTPException(status_code=401, detail="AccessToken not provided")
-    if not user_id:
-        raise HTTPException(status_code=400, detail="userId not provided")
-    logging.info(
-        f"Processing saveImage request for user: {user_id} with accessToken: [REDACTED]"
-    )
-
-
-# 画像分類の初期化
-def initialize_classifier(storage_client):
-    bucket = storage_client.bucket(PROJECT)
-    model_bucket = storage_client.bucket(MODEL_BUCKET_NAME)
-    _, model_local_path = tempfile.mkstemp()
-    blob_model = model_bucket.blob("gourmet_cnn_vgg_final.tflite")
-    blob_model.download_to_filename(model_local_path)
-    interpreter = tf.lite.Interpreter(model_path=model_local_path)
-    interpreter.allocate_tensors()
-    return (
-        bucket,
-        interpreter,
-        interpreter.get_input_details(),
-        interpreter.get_output_details(),
-    )
 
 
 def process_images(access_token: str, user_id: str, db, storage_client):
@@ -240,14 +237,10 @@ def process_images(access_token: str, user_id: str, db, storage_client):
         "other",
     ]
 
-    # Firestoreの更新ロジック
     photo_count = 0
     user_doc_ref = db.collection("users").document(user_id)
     photos_ref = user_doc_ref.collection("photos")
-    photos_doc_snapshot = photos_ref.limit(1).get()
-    has_fetched_before = any(photos_doc_snapshot)
-
-    # ドキュメントの最新時刻を取得
+    has_fetched_before = any(photos_ref.limit(1).get())
     latest_photo_datetime = datetime.now(timezone.utc)
     if has_fetched_before:
         latest_photo_id = get_latest_document_id(user_id, db)
@@ -266,28 +259,13 @@ def process_images(access_token: str, user_id: str, db, storage_client):
             return {"message": "No media items found"}
 
         for photo in photos_data["mediaItems"]:
-            if "screenshot" in photo["filename"].lower():
-                continue  # スクリーンショットを含む画像を除外
-
-            # Google Photos APIから撮影日時を取得し、取得できない場合はこの写真の処理をスキップ
-            shot_at = photo.get("mediaMetadata", {}).get("creationTime")
-            if not shot_at:
-                logging.info(
-                    f"No shot_at time for photo {photo['filename']}. Skipping."
-                )
-                continue  # 撮影日時が取得できない場合は次の写真へ
-
-            # APIから取得した日時文字列をdatetimeオブジェクトに変換
-            shot_at_datetime = datetime.strptime(
-                shot_at, "%Y-%m-%dT%H:%M:%S%z"
-            )
-
-            # 2回目以降利用で、かつ撮影日時が latest_photo_datetime よりも新しいか確認
-            # TODO: 撮影日時ではなく、保存日時に差し替えないといけないかも？。
+            shot_at_datetime = filter_photo(photo)
             if has_fetched_before and shot_at_datetime < latest_photo_datetime:
-                # 古い写真が見つかったら、処理を終了
-                user_doc_ref.update({"classifyPhotosStatus": READY_FOR_USE})
+                update_user_doc_status(user_id, db)
                 return {"message": "Successfully processed photos"}
+
+            if not shot_at_datetime:
+                continue
 
             predicted, content = classify_image(
                 photo["baseUrl"],
@@ -301,78 +279,31 @@ def process_images(access_token: str, user_id: str, db, storage_client):
                 and content
                 and classes[predicted] in classes[:-1]
             ):  # "other" is excluded
-                filename = f"{uuid.uuid4()}.jpg"  # 一意のファイル名を生成
                 image_url = save_to_cloud_storage(
-                    content, filename, bucket, user_id
+                    content, f"{uuid.uuid4()}.jpg", bucket, user_id
                 )
-                result, message = save_to_firestore(
+                save_to_firestore(
                     image_url,
                     shot_at_datetime,
                     user_id,
                     db,
                 )
 
-                if result:
-                    logging.info(f"photo_count: {photo_count}")
-                    photo_count += 1  # 写真を正常に保存したらカウントを1増やす
-                    # 8枚の写真が処理されたらclassifyPhotosStatusを更新
-                    if photo_count == 8:
-                        logging.info(f"classifyPhotosStatus: {READY_FOR_USE}")
-                        user_doc_ref.update(
-                            {"classifyPhotosStatus": READY_FOR_USE}
-                        )
-                        # TODO: 以下のtry exceptはあとで消す。
-                        try:
-                            doc_snapshot = user_doc_ref.get()
-                            if doc_snapshot.exists:
-                                current_status = doc_snapshot.to_dict().get(
-                                    "classifyPhotosStatus", "not set"
-                                )
-                                logging.info(
-                                    f"Current classifyPhotosStatus is: {current_status}"
-                                )
-                            else:
-                                logging.error("Document does not exist.")
-                        except Exception as e:
-                            logging.error(f"Failed to read document: {e}")
-
-                else:
-                    logging.error(message)
-                    raise HTTPException(status_code=500, detail=message)
+                logging.info(f"photo_count: {photo_count}")
+                photo_count += 1  # 写真を正常に保存したらカウントを1増やす
+                # 8枚の写真が処理されたらclassifyPhotosStatusを更新
+                if photo_count == 8:
+                    logging.info(f"classifyPhotosStatus: {READY_FOR_USE}")
+                    update_user_doc_status(user_id, db)
 
         next_token = photos_data.get("nextPageToken")
         if not next_token:
             break
 
+    return {"message": "Successfully processed photos"}
+
 
 def save_image(user_id: str, access_token: str, db, storage_client):
     authenticate_user(access_token, user_id)
     process_images(access_token, user_id, db, storage_client)
-    db.collection("users").document(user_id).update(
-        {"classifyPhotosStatus": READY_FOR_USE}
-    )
-    return {"message": "Successfully processed photos"}
-
-
-def update_user_status(user_id: str, access_token: str, db):
-    if not access_token:
-        raise HTTPException(
-            status_code=401,
-            detail="アクセストークンが提供されていないか無効です",
-        )
-
-    if not user_id:
-        raise HTTPException(
-            status_code=400, detail="userIdが提供されていません"
-        )
-
-    # Firestoreの更新ロジック
-    users_ref = db.collection("users")
-    logging.info(f"users_ref={users_ref}")
-
-    user_doc_ref = users_ref.document(user_id)
-    logging.info(f"user_doc_ref={user_doc_ref}")
-
-    new_state = READY_FOR_USE
-    user_doc_ref.update({"classifyPhotosStatus": new_state})
-    return {"message": "Successfully processed photos"}
+    return {"message": "Successfully save image"}

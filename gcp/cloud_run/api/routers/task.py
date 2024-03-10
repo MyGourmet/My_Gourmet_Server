@@ -4,10 +4,8 @@ from firebase_admin import firestore  # type: ignore
 from google.cloud import storage  # type: ignore
 
 # First Party Library
-from api.schemas.classify_photos import (  # type: ignore
-    save_image,
-    update_user_status,
-)
+from api.schemas.classify_photos import save_image  # type: ignore
+from api.schemas.update_user_status import update_user_status  # type: ignore
 
 router = APIRouter()
 
