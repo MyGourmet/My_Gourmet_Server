@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Tuple
 
 # Third Party Library
-import numpy as np
+import numpy as np  # type: ignore
 import requests  # type: ignore
 import tensorflow as tf  # type: ignore
 from fastapi import FastAPI, HTTPException  # type: ignore
@@ -24,7 +24,9 @@ logging.basicConfig(level=logging.INFO)
 app = FastAPI()
 
 # Constants
-MODEL_BUCKET_NAME = os.getenv("MODEL_BUCKET_NAME","model-jp-my-gourmet-image-classification-2023-08")
+MODEL_BUCKET_NAME = os.getenv(
+    "MODEL_BUCKET_NAME", "model-jp-my-gourmet-image-classification-2023-08"
+)
 GCS_PREFIX = "photo-jp-my-gourmet-image-classification-2023-08"
 PROJECT = os.getenv("GCP_PROJECT", "default-project")
 READY_FOR_USE = "readyForUse"
@@ -139,7 +141,6 @@ def save_to_firestore(
         photo_data = {
             "createdAt": datetime.utcnow(),
             "updatedAt": datetime.utcnow(),
-            # "shotAt": shot_at,
             "userId": user_id,
             "url": image_url,
             "otherUrls": [],
@@ -199,8 +200,6 @@ def extract_datetime_from_id(document_id: str) -> datetime:
     return date_time_obj
 
 
-# いらない？？
-@app.post("/saveImage")
 def save_image(
     user_id: str, access_token: str, db, storage_client
 ) -> Dict[str, str]:
@@ -349,7 +348,6 @@ def save_image(
 
 
 def update_user_status(user_id: str, access_token: str, db):
-    logging.info(f"db={db}")
     if not access_token:
         raise HTTPException(
             status_code=401,
@@ -368,6 +366,6 @@ def update_user_status(user_id: str, access_token: str, db):
     user_doc_ref = users_ref.document(user_id)
     logging.info(f"user_doc_ref={user_doc_ref}")
 
-    new_state = "readyForUse"
+    new_state = READY_FOR_USE
     user_doc_ref.update({"classifyPhotosStatus": new_state})
     return {"message": "Successfully processed photos"}

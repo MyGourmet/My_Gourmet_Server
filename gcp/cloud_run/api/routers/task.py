@@ -58,7 +58,6 @@ async def update_user_status_endpoint(
     )
     user_id = body.get("userId")
 
-    # update_user_status関数を呼び出し、dbを引数として渡す
     return update_user_status(
         user_id=user_id, access_token=access_token, db=db
     )
