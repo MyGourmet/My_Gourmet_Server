@@ -1,0 +1,42 @@
+@startuml
+
+class User {
+    - user_id: String
+    - access_token: String
+    - classifyPhotosStatus: String
+
+    + authenticate_user(access_token: String, user_id: String): void
+    + update_user_doc_status(db): void
+}
+
+class Photo {
+    - shot_at: DateTime
+    - created_at: DateTime
+    - updated_at: DateTime
+    - deleted_at: DateTime
+    - user_id: String
+    - url: String
+    - otherUrls: []
+    - tags: []
+    - storeId: None
+    - areaStoreIds: []
+
+    + get_photos_from_google_photo_api(access_token: String, page_size: int, next_page_token: Optional[String]): Dict[String, Any]
+    + filter_photo(photo): Union[False, DateTime]
+    + save_to_cloud_storage(content: Bytes, filename: String, bucket: storage.Bucket, user_id: String): String
+    + save_to_firestore(url: String, shot_at: DateTime, db): void
+}
+
+class Classifier {
+    - interpreter: tf.lite.Interpreter
+    - input_details: Any
+    - output_details: Any
+
+    + initialize_classifier(storage_client): Tuple
+    + classify_image(url: String, interpreter: tf.lite.Interpreter, input_details: Any, output_details: Any): Tuple[Optional[int], Optional[bytes]]
+}
+
+User "1" *-- "many" Photo : has >
+Classifier "1" -- "many" Photo : classifies >
+
+@enduml

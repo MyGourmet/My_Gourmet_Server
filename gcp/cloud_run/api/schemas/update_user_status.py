@@ -1,5 +1,6 @@
 # Standard Library
 import logging
+from typing import Any
 
 # Third Party Library
 from fastapi import FastAPI, HTTPException  # type: ignore
@@ -11,7 +12,7 @@ logging.basicConfig(level=logging.INFO)
 app = FastAPI()
 
 
-def update_user_status(user_id: str, access_token: str, db):
+def update_user_status(user_id: str, access_token: str, db: Any) -> dict[str, str]:
     if not access_token:
         raise HTTPException(
             status_code=401,
@@ -19,9 +20,7 @@ def update_user_status(user_id: str, access_token: str, db):
         )
 
     if not user_id:
-        raise HTTPException(
-            status_code=400, detail="userIdが提供されていません"
-        )
+        raise HTTPException(status_code=400, detail="userIdが提供されていません")
 
     # Firestoreの更新ロジック
     users_ref = db.collection("users")
