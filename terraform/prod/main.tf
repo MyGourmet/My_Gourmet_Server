@@ -41,42 +41,6 @@ resource "google_firebase_storage_bucket" "default" {
   bucket_id = google_storage_bucket.default.id
 }
 
-resource "google_cloudfunctions2_function" "default" {
-  provider = google-beta
-  project  = var.project_id
-  location = var.region
-  name     = "classifyImage"
-
-  build_config {
-    entry_point = "handler"
-    runtime     = "python311"
-
-    source {
-      storage_source {
-        bucket     = "gcf-v2-sources-588802119789-asia-northeast1"
-        object     = "classifyImage/function-source.zip"
-        generation = 1701263863797525
-      }
-    }
-  }
-
-  service_config {
-    all_traffic_on_latest_revision   = true
-    available_cpu                    = "1000m"
-    available_memory                 = "2Gi"
-    ingress_settings                 = "ALLOW_ALL"
-    max_instance_count               = 100
-    max_instance_request_concurrency = 1
-    min_instance_count               = 0
-    service_account_email            = "588802119789-compute@developer.gserviceaccount.com"
-    timeout_seconds                  = 3600
-  }
-
-  labels = {
-    "deployment-tool" = "console-cloud"
-  }
-}
-
 resource "google_firestore_database" "default" {
   provider    = google-beta
   project     = var.project_id
@@ -88,8 +52,8 @@ resource "google_firestore_database" "default" {
 resource "google_firebase_android_app" "default" {
   provider     = google-beta
   project      = var.project_id
-  display_name = "my_gourmet"
-  package_name = "com.example.my_gourmet"
+  display_name = "MyGourmet"
+  package_name = "com.blue_waltz.my_gourmet"
 
   lifecycle {
     ignore_changes = [
@@ -99,32 +63,10 @@ resource "google_firebase_android_app" "default" {
   }
 }
 
-resource "google_project_service" "compute" {
-  provider = google-beta
-  project  = var.project_id
-  service  = "compute.googleapis.com"
-}
-
-# resource "google_project_service" "firestore" {
+# resource "google_project_service" "compute" {
 #   provider = google-beta
 #   project  = var.project_id
-#   service  = "cloud_firestore.googleapis.com"
+#   service  = "compute.googleapis.com"
 # }
 
-# resource "google_project_service" "firebase_management" {
-#   provider = google-beta
-#   project  = var.project_id
-#   service  = "firebasemanagement.googleapis.com"
-# }
 
-# resource "google_project_service" "cloud_functions" {
-#   provider = google-beta
-#   project  = var.project_id
-#   service  = "cloudfunctions.googleapis.com"
-# }
-
-# resource "google_project_service" "cloud_resource_manager" {
-#   provider = google-beta
-#   project  = "my-gourmet-160fb"
-#   service  = "cloudresourcemanager.googleapis.com"
-# }
