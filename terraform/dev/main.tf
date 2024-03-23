@@ -39,38 +39,6 @@ resource "google_firebase_storage_bucket" "default" {
   bucket_id = google_storage_bucket.default.id
 }
 
-// cloudfunctionsは普通に手でやってもいいかも
-# Update cloud function names and sources for development
-# resource "google_cloudfunctions2_function" "default" {
-#   provider = google-beta
-#   project  = var.project_id
-#   location = var.region
-#   name     = "dev-classifyImage"
-
-#   build_config {
-#     entry_point = "handler"
-#     runtime     = "python311"
-
-#     source {
-#       storage_source {
-#         //本当はstorageが作られたタイミングでそこを参照する作りにしないといけないが、今回はベタ書き
-#         bucket = "gcf-v2-sources-817268264540-asia-northeast1"
-#         object = "dev-classifyImage/function-source.zip"
-#       }
-#     }
-#   }
-
-#   service_config {
-#     // Configurations may vary based on environment requirements
-#   }
-
-#   labels = {
-#     "environment" = "development"
-#   }
-# }
-
-#ここをコメントアウトしたのが、エラーの原因
-# The caller does not have permission
 resource "google_firestore_database" "default" {
   provider    = google-beta
   project     = var.project_id
@@ -83,8 +51,8 @@ resource "google_firestore_database" "default" {
 resource "google_firebase_android_app" "default" {
   provider     = google-beta
   project      = var.project_id
-  display_name = "dev_my_gourmet"
-  package_name = "com.example.dev_my_gourmet"
+  display_name = "MyGourmet"
+  package_name = "com.blue_waltz.my_gourmet.dev"
 
   lifecycle {
     ignore_changes = [
