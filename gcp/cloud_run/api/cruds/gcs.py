@@ -24,10 +24,7 @@ def save_to_cloud_storage(
         # ファイルを公開して、公開URLを取得
         blob.make_public()
         image_url: str = blob.public_url
-        if image_url:
-            return image_url
-        else:
-            return ""
+        return image_url
 
     except Exception as e:
         logging.error(f"Failed to upload image to Cloud Storage: {e}")

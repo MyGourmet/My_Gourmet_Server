@@ -17,8 +17,9 @@ def get_photos_from_google_photo_api(
         if next_page_token:
             search_request_data["pageToken"] = next_page_token
 
+        post_url = "https://photoslibrary.googleapis.com/v1/mediaItems:search"
         response = requests.post(
-            "https://photoslibrary.googleapis.com/v1/mediaItems:search",
+            post_url,
             headers={"Authorization": f"Bearer {access_token}"},
             json=search_request_data,
             timeout=10,

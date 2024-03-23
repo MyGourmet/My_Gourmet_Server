@@ -12,9 +12,7 @@ from fastapi import HTTPException  # type: ignore
 from tensorflow.keras.preprocessing.image import img_to_array, load_img  # type: ignore
 
 # Constants
-MODEL_BUCKET_NAME = os.getenv(
-    "MODEL_BUCKET_NAME", "model-jp-my-gourmet-image-classification-2023-08"
-)
+MODEL_BUCKET_NAME = os.getenv("MODEL_BUCKET_NAME", "model-local-minio-bucket-name")
 PROJECT = os.getenv("GCP_PROJECT", "default-project")
 
 
@@ -61,6 +59,8 @@ def classify_image(
 
         img = load_img(temp_local_path, target_size=(224, 224))
         x = img_to_array(img)
+        # 画像のピクセル値を0から1の範囲に正規化します。これは、ニューラルネットワークにデータを供給する前の一般的な前処理ステップです。
+        # ニューラルネットワークは、より小さなスケールの入力データに対して通常、より良いパフォーマンスを発揮します。
         x /= 255.0
         x = np.expand_dims(x, axis=0)
 

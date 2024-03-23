@@ -21,7 +21,6 @@ logging.basicConfig(level=logging.INFO)
 app = FastAPI()
 
 # Constants
-GCS_PREFIX = "photo-jp-my-gourmet-image-classification-2023-08"
 READY_FOR_USE = "readyForUse"
 
 
