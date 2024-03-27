@@ -1,7 +1,6 @@
 # Standard Library
 import logging
-from datetime import datetime
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional
 
 # Third Party Library
 import requests  # type: ignore
@@ -33,14 +32,13 @@ def get_photos_from_google_photo_api(
         )
 
 
-def filter_photo(
+def should_process_photo(
     photo: Any,
-) -> Union[False, datetime]:
+) -> bool:
     """写真が処理対象かどうかを判断する。"""
     if "screenshot" in photo["filename"].lower():
         return False
-    shot_at = photo.get("mediaMetadata", {}).get("creationTime")
-    if not shot_at:
+    if not photo.get("mediaMetadata", {}).get("creationTime"):
         logging.info(f"No shot_at time for photo {photo['filename']}. Skipping.")
         return False
-    return datetime.strptime(shot_at, "%Y-%m-%dT%H:%M:%S%z")
+    return True

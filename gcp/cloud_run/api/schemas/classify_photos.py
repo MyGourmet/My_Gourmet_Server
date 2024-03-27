@@ -10,7 +10,7 @@ from fastapi import FastAPI  # type: ignore
 # First Party Library
 from api.core.auth import authenticate_user, update_user_doc_status
 from api.core.classify import classify_image, initialize_classifier
-from api.core.photo import filter_photo, get_photos_from_google_photo_api
+from api.core.photo import get_photos_from_google_photo_api, should_process_photo
 from api.cruds.firestore import get_latest_document_id, save_to_firestore
 from api.cruds.gcs import save_to_cloud_storage
 
@@ -59,25 +59,24 @@ def process_images(access_token: str, user_id: str, db: Any, storage_client: Any
     # データ前処理
 
     # データ処理
-    # try_catchを書いていく。
-    for _ in range(1):
-
+    for _ in range(3):
         photos_data = get_photos_from_google_photo_api(
-            access_token, page_size=50, next_page_token=next_token
+            access_token, page_size=100, next_page_token=next_token
         )
         if not photos_data.get("mediaItems"):
             logging.info("No mediaItems found in the response.")
             return {"message": "No media items found"}
 
         for photo in photos_data["mediaItems"]:
-            shot_at_datetime = filter_photo(photo)
-            # photoオブジェクトに下記の3行の処理が渡されていくイメージ
-            if has_fetched_before and shot_at_datetime < latest_photo_datetime:
-                update_user_doc_status(user_id, db)
-                return {"message": "Successfully processed photos"}
-
-            if not shot_at_datetime:
+            if not should_process_photo(photo):
                 continue
+            shot_at_datetime = datetime.strptime(
+                photo.get("mediaMetadata", {}).get("creationTime"), "%Y-%m-%dT%H:%M:%S%z"
+            )
+            # photoオブジェクトに下記の3行の処理が渡されていくイメージ
+            if has_fetched_before and shot_at_datetime <= latest_photo_datetime:
+                update_user_doc_status(user_id, db)
+                return {"message": "Successfully processed less 8 photos"}
 
             predicted, content = classify_image(
                 photo["baseUrl"],
@@ -86,7 +85,7 @@ def process_images(access_token: str, user_id: str, db: Any, storage_client: Any
                 output_details,
             )
 
-            # 　以下が後処理
+            # データ後処理
 
             # predictedがNoneでないことを確認してからリストをインデックス参照する
             if (

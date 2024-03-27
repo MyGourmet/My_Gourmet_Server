@@ -4,7 +4,7 @@ from typing import Any
 # Third Party Library
 from fastapi import APIRouter, Depends, Request  # type: ignore
 from firebase_admin import firestore  # type: ignore
-from google.cloud import storage
+from google.cloud import storage  # type: ignore
 
 # First Party Library
 from api.schemas.classify_photos import save_image

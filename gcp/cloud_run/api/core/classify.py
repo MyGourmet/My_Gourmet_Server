@@ -41,7 +41,7 @@ def classify_image(
     input_details: Any,
     output_details: Any,
 ) -> Tuple[Optional[int], Optional[bytes]]:
-    logging.info(f"Starting classification for image: {url}")
+    # logging.info(f"Starting classification for image: {url}")
     try:
         response = requests.get(url)
         response.raise_for_status()
