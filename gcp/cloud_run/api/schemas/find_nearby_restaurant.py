@@ -85,15 +85,16 @@ def process_image(lat, lon, api_key, user_id, photo_id, db):
         logging.error(f"Could not retrieve location data for {lat},{lon}: {e}. Skipping...")
 
 
-def handler(user_id: str, access_token: str, db: Any) -> dict[str, str]:
+def handler(
+    user_id: str, access_token: str, lat: float, lon: float, photo_id: str, db: Any
+) -> dict[str, str]:
     authenticate_user(access_token, user_id)
 
     # 本処理
     api_key = "AIzaSyA0_ky7Sj1pl8QB_xvzbmebvo1l1JwqL5M"
-    lat = 35.446841666666664
-    lon = 139.63788888888888
-    # ローカルDBのphoto_idを固定値で指定する
-    photo_id = "QLi6rfxJQ1Y0Hx7QELnWLsjq11z2"
+    logging.info("lat: %s", lat)
+    logging.info("lon: %s", lon)
+    logging.info("photo_id: %s", photo_id)
     process_image(lat, lon, api_key, user_id, photo_id, db)
 
     # Firestoreの更新ロジック

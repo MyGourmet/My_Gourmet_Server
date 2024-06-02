@@ -57,8 +57,13 @@ async def find_nearby_restaurants_endpoint(
         auth_header.split(" ")[1] if auth_header and auth_header.startswith("Bearer ") else None
     )
     user_id = body.get("userId")
+    lat = body.get("lat")
+    lon = body.get("lon")
+    photo_id = body.get("photo_id")
 
-    return handler(user_id=user_id, access_token=access_token, db=db)
+    return handler(
+        user_id=user_id, access_token=access_token, lat=lat, lon=lon, photo_id=photo_id, db=db
+    )
 
 
 @router.post("/updateUserStatus")
