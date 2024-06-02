@@ -687,6 +687,19 @@ protobuf = ">=3.19.5,<3.20.0 || >3.20.0,<3.20.1 || >3.20.1,<4.21.1 || >4.21.1,<4
 grpc = ["grpcio (>=1.44.0,<2.0.0.dev0)"]
 
 [[package]]
+name = "googlemaps"
+version = "4.10.0"
+description = "Python client library for Google Maps Platform"
+optional = false
+python-versions = ">=3.5"
+files = [
+    {file = "googlemaps-4.10.0.tar.gz", hash = "sha256:3055fcbb1aa262a9159b589b5e6af762b10e80634ae11c59495bd44867e47d88"},
+]
+
+[package.dependencies]
+requests = ">=2.20.0,<3.0"
+
+[[package]]
 name = "grpcio"
 version = "1.60.0"
 description = "HTTP/2-based RPC framework"
@@ -2153,4 +2166,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "7ae45d0a170f4d5e672c53de0bddf7778875119b728447c971ae0c3768bbdfea"
+content-hash = "4787534bc5a0b59dbafb5daef707bf8c4677e664398e0ddca0f05298cb1304d6"

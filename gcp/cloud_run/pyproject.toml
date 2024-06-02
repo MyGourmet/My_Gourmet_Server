@@ -16,6 +16,7 @@ requests = "^2.31.0"
 tensorflow-cpu = [
     { version = "^2.13.0", platform = "linux", markers = "platform_machine!='arm64' and platform_machine!='aarch64'" },]
 pillow = ">=6.0,<7.0"
+googlemaps = "*"
 
 [tool.mypy]
 # エラー時のメッセージを詳細表示
