@@ -50,7 +50,6 @@ async def find_nearby_restaurants_endpoint(
     db: Any = Depends(get_firestore_client),
     storage_client: Any = Depends(get_storage_client),
 ) -> dict[str, str]:
-    # リクエストからデータを抽出
     body = await request.json()
     auth_header = request.headers.get("Authorization")
     access_token = (
@@ -62,7 +61,13 @@ async def find_nearby_restaurants_endpoint(
     photo_id = body.get("photo_id")
 
     return handler(
-        user_id=user_id, access_token=access_token, lat=lat, lon=lon, photo_id=photo_id, db=db
+        user_id=user_id,
+        access_token=access_token,
+        lat=lat,
+        lon=lon,
+        photo_id=photo_id,
+        db=db,
+        storage_client=storage_client,
     )
 
 
@@ -72,7 +77,6 @@ async def update_user_status_endpoint(
     db: Any = Depends(get_firestore_client),
     storage_client: Any = Depends(get_storage_client),
 ) -> dict[str, str]:
-    # リクエストからデータを抽出
     body = await request.json()
     auth_header = request.headers.get("Authorization")
     access_token = (

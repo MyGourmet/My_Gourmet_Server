@@ -1,7 +1,7 @@
 # Standard Library
 import logging
 from datetime import datetime
-from typing import Any, List
+from typing import Any
 
 # Third Party Library
 from fastapi import HTTPException  # type: ignore

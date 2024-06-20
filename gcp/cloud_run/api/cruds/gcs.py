@@ -1,5 +1,7 @@
 # Standard Library
 import logging
+import os
+from typing import Any
 
 # Third Party Library
 from fastapi import HTTPException  # type: ignore
@@ -7,18 +9,15 @@ from google.cloud import storage  # type: ignore
 
 # Constants
 GCS_PREFIX = "photo-jp-my-gourmet-image-classification-2023-08"
+PROJECT = os.getenv("GCP_PROJECT", "default-project")
 
 
-def save_to_cloud_storage(
-    content: bytes,
-    filename: str,
-    bucket: storage.Bucket,
-    user_id: str,
-) -> str:
+def save_to_cloud_storage(content: bytes, filename: str, store_id: str, storage_client: Any) -> str:
     try:
-        logging.info(f"Preparing to upload image to Cloud Storage: {filename}")
+        bucket = storage_client.bucket(PROJECT)
         """Firebase Storageに画像をアップロードし、公開URLを取得する"""
-        blob = bucket.blob(f"{GCS_PREFIX}/{user_id}/{filename}")
+        blob = bucket.blob(f"{GCS_PREFIX}/{store_id}/{filename}")
+
         blob.upload_from_string(content, content_type="image/jpeg")
 
         # ファイルを公開して、公開URLを取得
@@ -30,5 +29,5 @@ def save_to_cloud_storage(
         logging.error(f"Failed to upload image to Cloud Storage: {e}")
         raise HTTPException(
             status_code=500,
-            detail="An error occurred while saving to Firestore: {e}",
+            detail=f"An error occurred while saving to Firestore: {e}",
         )
