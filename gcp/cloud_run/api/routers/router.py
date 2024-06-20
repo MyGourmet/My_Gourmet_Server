@@ -51,10 +51,10 @@ async def find_nearby_restaurants_endpoint(
     storage_client: Any = Depends(get_storage_client),
 ) -> dict[str, str]:
     body = await request.json()
-    auth_header = request.headers.get("Authorization")
-    access_token = (
-        auth_header.split(" ")[1] if auth_header and auth_header.startswith("Bearer ") else None
-    )
+    # auth_header = request.headers.get("Authorization")
+    # access_token = (
+    #     auth_header.split(" ")[1] if auth_header and auth_header.startswith("Bearer ") else None
+    # )
     user_id = body.get("userId")
     lat = body.get("lat")
     lon = body.get("lon")
@@ -62,7 +62,7 @@ async def find_nearby_restaurants_endpoint(
 
     return handler(
         user_id=user_id,
-        access_token=access_token,
+        # access_token=access_token,
         lat=lat,
         lon=lon,
         photo_id=photo_id,

@@ -102,14 +102,14 @@ def process_image(
 
 def handler(
     user_id: str,
-    access_token: str,
+    # access_token: str,
     lat: float,
     lon: float,
     photo_id: str,
     db: Any,
     storage_client: Any,
 ) -> dict[str, str]:
-    authenticate_user(access_token, user_id)
+    # authenticate_user(access_token, user_id)
 
     # 本処理
     api_key = "AIzaSyA0_ky7Sj1pl8QB_xvzbmebvo1l1JwqL5M"
