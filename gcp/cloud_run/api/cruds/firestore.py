@@ -54,15 +54,30 @@ def save_to_firestore(store_data: StoreData, photo_id: str, user_id: str, db: An
             "createdAt": datetime.utcnow(),
             "updatedAt": datetime.utcnow(),
             "name": store_data.name,
+            "address": store_data.address,
             "phoneNumber": store_data.phoneNumber,
             "website": store_data.website,
-            "openingHours": store_data.openingHours,
             "imageUrls": store_data.imageUrls,
         }
 
-        # `stores` コレクションにデータを保存
         db.collection("stores").document(store_data.store_id).set(store_data_dict)
         logging.info(f"Saved store data to stores collection with ID {store_data.store_id}")
+
+        opening_hours_data = {
+            "mondayHours": store_data.openingHours.mondayHours,
+            "tuesdayHours": store_data.openingHours.tuesdayHours,
+            "wednesdayHours": store_data.openingHours.wednesdayHours,
+            "thursdayHours": store_data.openingHours.thursdayHours,
+            "fridayHours": store_data.openingHours.fridayHours,
+            "saturdayHours": store_data.openingHours.saturdayHours,
+            "sundayHours": store_data.openingHours.sundayHours,
+        }
+
+        db.collection("stores").document(store_data.store_id).collection("openingHours").document(
+            "hours"
+        ).set(opening_hours_data)
+
+        logging.info(f"Saved opening hours to stores/{store_data.store_id}/openingHours/hours")
 
     except Exception as e:
         logging.error(f"An error occurred while saving to Firestore: {e}")
