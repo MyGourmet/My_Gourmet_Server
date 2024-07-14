@@ -5,24 +5,16 @@ from typing import List
 
 
 @dataclass
-class OpeningHours:
-    mondayHours: str = ""
-    tuesdayHours: str = ""
-    wednesdayHours: str = ""
-    thursdayHours: str = ""
-    fridayHours: str = ""
-    saturdayHours: str = ""
-    sundayHours: str = ""
-
-
-@dataclass
 class StoreData:
     store_id: str
     createdAt: datetime
     updatedAt: datetime
     name: str
     address: str
+    city: str
+    prefecture: str
+    country: str
     phoneNumber: str
     website: str = ""
-    openingHours: OpeningHours = field(default_factory=OpeningHours)
+    openingHours: dict = field(default_factory=dict)
     imageUrls: List[str] = field(default_factory=list)

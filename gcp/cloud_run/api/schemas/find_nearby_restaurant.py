@@ -9,11 +9,14 @@ import googlemaps
 import requests  # type: ignore
 from fastapi import FastAPI  # type: ignore
 
+# First Party Library
+from api.core.romaji_conversion_dict import romaji_conversion_dict
+
 logging.basicConfig(level=logging.INFO)
 # First Party Library
 # logging.basicConfig(level=logging.ERROR)
 from api.core.auth import update_user_doc_status
-from api.core.data_class import OpeningHours, StoreData
+from api.core.data_class import StoreData
 from api.cruds.firestore import save_to_firestore
 from api.cruds.gcs import save_to_cloud_storage
 
@@ -61,59 +64,84 @@ def format_opening_hours_by_day(opening_hours):
     return day_periods
 
 
+def get_formatted_hours(opening_hours: dict) -> dict:
+    formatted_hours = format_opening_hours_by_day(opening_hours)
+    hours = {
+        "sunday_hours": (
+            ", ".join(formatted_hours["Sunday"]) if formatted_hours["Sunday"] else "Closed"
+        ),
+        "monday_hours": (
+            ", ".join(formatted_hours["Monday"]) if formatted_hours["Monday"] else "Closed"
+        ),
+        "tuesday_hours": (
+            ", ".join(formatted_hours["Tuesday"]) if formatted_hours["Tuesday"] else "Closed"
+        ),
+        "wednesday_hours": (
+            ", ".join(formatted_hours["Wednesday"]) if formatted_hours["Wednesday"] else "Closed"
+        ),
+        "thursday_hours": (
+            ", ".join(formatted_hours["Thursday"]) if formatted_hours["Thursday"] else "Closed"
+        ),
+        "friday_hours": (
+            ", ".join(formatted_hours["Friday"]) if formatted_hours["Friday"] else "Closed"
+        ),
+        "saturday_hours": (
+            ", ".join(formatted_hours["Saturday"]) if formatted_hours["Saturday"] else "Closed"
+        ),
+    }
+    return hours
+
+
+def extract_address_component(address_components, component_type):
+    for component in address_components:
+        if component_type in component["types"]:
+            return component["long_name"]
+    return None
+
+
+def convert_to_romaji(text):
+    return romaji_conversion_dict.get(text, text)
+
+
 def find_nearby_restaurants(
     lat: float, lon: float, api_key: str, user_id: str, photo_id: str, db: Any, storage_client: Any
 ) -> StoreData:
     gmaps = googlemaps.Client(key=api_key)
     places = gmaps.places_nearby(location=(lat, lon), radius=15, type="restaurant", language="ja")
-    # logging.info("Nearby Restaurants and Details:")
     for place in places["results"]:
         details = get_place_details(place["place_id"], api_key)
         name = details.get("name")
         address = details.get("formatted_address")
+
+        address_components = details.get("address_components", [])
+
+        prefecture = extract_address_component(address_components, "administrative_area_level_1")
+        city = extract_address_component(address_components, "locality")
+        country = extract_address_component(address_components, "country")
+
+        if prefecture:
+            romaji_prefecture = convert_to_romaji(prefecture)
+        if city:
+            romaji_city = convert_to_romaji(city)
+        if country:
+            romaji_country = convert_to_romaji(country)
+
         phone_number = details.get("formatted_phone_number")
         website = details.get("website")
         opening_hours = details.get("opening_hours", {})
 
-        # logging.info(f"- {name}")
-        # logging.info(f"  Address: {address}")
-        # logging.info(f"  Phone Number: {phone_number}")
-        # logging.info(f"  Website: {website}")
-        # logging.info(f"  Rating: {rating}")
-
         if "periods" in opening_hours:
-            formatted_hours = format_opening_hours_by_day(opening_hours)
-            sunday_hours = (
-                ", ".join(formatted_hours["Sunday"]) if formatted_hours["Sunday"] else "Closed"
-            )
-            monday_hours = (
-                ", ".join(formatted_hours["Monday"]) if formatted_hours["Monday"] else "Closed"
-            )
-            tuesday_hours = (
-                ", ".join(formatted_hours["Tuesday"]) if formatted_hours["Tuesday"] else "Closed"
-            )
-            wednesday_hours = (
-                ", ".join(formatted_hours["Wednesday"])
-                if formatted_hours["Wednesday"]
-                else "Closed"
-            )
-            thursday_hours = (
-                ", ".join(formatted_hours["Thursday"]) if formatted_hours["Thursday"] else "Closed"
-            )
-            friday_hours = (
-                ", ".join(formatted_hours["Friday"]) if formatted_hours["Friday"] else "Closed"
-            )
-            saturday_hours = (
-                ", ".join(formatted_hours["Saturday"]) if formatted_hours["Saturday"] else "Closed"
-            )
+            formatted_hours = get_formatted_hours(opening_hours)
         else:
-            sunday_hours = "Closed"
-            monday_hours = "Closed"
-            tuesday_hours = "Closed"
-            wednesday_hours = "Closed"
-            thursday_hours = "Closed"
-            friday_hours = "Closed"
-            saturday_hours = "Closed"
+            formatted_hours = {
+                "sunday_hours": "Unknown",
+                "monday_hours": "Unknown",
+                "tuesday_hours": "Unknown",
+                "wednesday_hours": "Unknown",
+                "thursday_hours": "Unknown",
+                "friday_hours": "Unknown",
+                "saturday_hours": "Unknown",
+            }
 
         image_urls: List[str] = []
         if "photos" in details:
@@ -132,25 +160,18 @@ def find_nearby_restaurants(
 
                 image_urls.append(uploaded_image_url)
 
-        opening_hours = OpeningHours(
-            mondayHours=monday_hours,
-            tuesdayHours=tuesday_hours,
-            wednesdayHours=wednesday_hours,
-            thursdayHours=thursday_hours,
-            fridayHours=friday_hours,
-            saturdayHours=saturday_hours,
-            sundayHours=sunday_hours,
-        )
-
         store_data = StoreData(
             store_id=place["place_id"],
             createdAt=datetime.now(),
             updatedAt=datetime.now(),
             name=name,
             address=address,
+            city=romaji_city,
+            prefecture=romaji_prefecture,
+            country=romaji_country,
             phoneNumber=phone_number if phone_number else "",
             website=website if website else "",
-            openingHours=opening_hours,
+            openingHours=formatted_hours,
             imageUrls=image_urls,
         )
 
@@ -173,15 +194,12 @@ def process_image(
 
 def handler(
     user_id: str,
-    # access_token: str,
     lat: float,
     lon: float,
     photo_id: str,
     db: Any,
     storage_client: Any,
 ) -> dict[str, str]:
-    # authenticate_user(access_token, user_id)
-
     # 本処理
     api_key = "AIzaSyA0_ky7Sj1pl8QB_xvzbmebvo1l1JwqL5M"
     # ここはenvで持たせるように修正
