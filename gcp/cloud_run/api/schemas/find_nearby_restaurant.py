@@ -17,8 +17,8 @@ logging.basicConfig(level=logging.INFO)
 # logging.basicConfig(level=logging.ERROR)
 from api.core.auth import update_user_doc_status
 from api.core.data_class import StoreData
-from api.cruds.firestore import save_to_firestore
-from api.cruds.gcs import save_to_cloud_storage
+from api.cruds.firestore import save_store_data_to_firestore
+from api.cruds.gcs import save_store_photo_to_cloud_storage
 
 app = FastAPI()
 
@@ -153,7 +153,7 @@ def find_nearby_restaurants(
                 response.raise_for_status()
                 image_data = response.content
 
-                uploaded_image_url = save_to_cloud_storage(
+                uploaded_image_url = save_store_photo_to_cloud_storage(
                     image_data, f"{uuid.uuid4()}.jpg", place["place_id"], storage_client
                 )
                 logging.info("uploaded_image_url", uploaded_image_url)
@@ -175,7 +175,7 @@ def find_nearby_restaurants(
             imageUrls=image_urls,
         )
 
-        save_to_firestore(store_data, photo_id, user_id, db)
+        save_store_data_to_firestore(store_data, photo_id, user_id, db)
 
     return store_data
 
@@ -192,7 +192,7 @@ def process_image(
         logging.error(f"Could not retrieve location data for {lat},{lon}: {e}. Skipping...")
 
 
-def handler(
+def find_nearby_restaurant(
     user_id: str,
     lat: float,
     lon: float,
