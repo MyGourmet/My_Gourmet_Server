@@ -46,8 +46,6 @@ def save_store_data_to_firestore(
                 "createdAt": current_time,
                 "updatedAt": current_time,
                 "userId": user_id,
-                "otherUrls": [],
-                "tags": [],
                 "storeId": store_data.store_id,
                 "areaStoreIds": [store_data.store_id],
             }
@@ -100,12 +98,8 @@ def save_category_and_photo_to_firestore(
             logging.info(
                 f"Photo document {photo_id} exists for user {user_id}. Updating image_url and category."
             )
-            photo_ref.update(
-                {"image_url": image_url, "category": category, "updatedAt": current_time}
-            )
-            logging.info(
-                f"Updated image_url and category: image_url={image_url}, category={category}"
-            )
+            photo_ref.update({"url": image_url, "category": category, "updatedAt": current_time})
+            logging.info(f"Updated image_url and category: url={image_url}, category={category}")
         else:
             # ドキュメントが存在しない場合、新しく作成
             logging.info(
@@ -115,7 +109,7 @@ def save_category_and_photo_to_firestore(
                 "createdAt": current_time,
                 "updatedAt": current_time,
                 "userId": user_id,
-                "image_url": image_url,
+                "url": image_url,
                 "category": category,
             }
             photo_ref.set(photo_data)
