@@ -45,7 +45,7 @@ def process_image(
         # 画像をGCSに保存
         logging.info("process_image start")
         filename = f"{photo_id}.jpg"
-        image_url = save_own_photo_to_cloud_storage(photo_data, filename, photo_id, storage_client)
+        image_url = save_own_photo_to_cloud_storage(photo_data, filename, user_id, storage_client)
         logging.info(f"Image saved to GCS: {image_url}")
 
         # 分析結果を返却

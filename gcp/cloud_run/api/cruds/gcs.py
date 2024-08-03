@@ -36,11 +36,11 @@ def save_store_photo_to_cloud_storage(
 
 
 def save_own_photo_to_cloud_storage(
-    content: bytes, filename: str, photo_id: str, storage_client: Any
+    content: bytes, filename: str, user_id: str, storage_client: Any
 ) -> str:
     try:
         bucket = storage_client.bucket(PROJECT)
-        blob = bucket.blob(f"{GCS_PREFIX}/{photo_id}/{filename}")
+        blob = bucket.blob(f"{GCS_PREFIX}/users_photo/{user_id}/{filename}")
 
         blob.upload_from_string(content, content_type="image/jpeg")
 
