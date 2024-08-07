@@ -108,6 +108,10 @@ def find_nearby_restaurants(
 ) -> StoreData:
     gmaps = googlemaps.Client(key=api_key)
     places = gmaps.places_nearby(location=(lat, lon), radius=15, type="restaurant", language="ja")
+
+    # 初期化
+    store_data = None
+
     for place in places["results"]:
         details = get_place_details(place["place_id"], api_key)
         name = details.get("name")
@@ -119,21 +123,18 @@ def find_nearby_restaurants(
         city = extract_address_component(address_components, "locality")
         country = extract_address_component(address_components, "country")
 
-        if prefecture:
-            romaji_prefecture = convert_to_romaji(prefecture)
-        if city:
-            romaji_city = convert_to_romaji(city)
-        if country:
-            romaji_country = convert_to_romaji(country)
+        romaji_prefecture = convert_to_romaji(prefecture) if prefecture else ""
+        romaji_city = convert_to_romaji(city) if city else ""
+        romaji_country = convert_to_romaji(country) if country else ""
 
         phone_number = details.get("formatted_phone_number")
         website = details.get("website")
         opening_hours = details.get("opening_hours", {})
 
-        if "periods" in opening_hours:
-            formatted_hours = get_formatted_hours(opening_hours)
-        else:
-            formatted_hours = {
+        formatted_hours = (
+            get_formatted_hours(opening_hours)
+            if "periods" in opening_hours
+            else {
                 "sunday_hours": "Unknown",
                 "monday_hours": "Unknown",
                 "tuesday_hours": "Unknown",
@@ -142,13 +143,12 @@ def find_nearby_restaurants(
                 "friday_hours": "Unknown",
                 "saturday_hours": "Unknown",
             }
+        )
 
         image_urls: List[str] = []
         if "photos" in details:
             for photo in details["photos"]:
                 photo_url = f"https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference={photo['photo_reference']}&key={api_key}"
-                # logging.info(f"  Image URL: {photo_url}")
-
                 response = requests.get(photo_url)
                 response.raise_for_status()
                 image_data = response.content
@@ -156,7 +156,7 @@ def find_nearby_restaurants(
                 uploaded_image_url = save_store_photo_to_cloud_storage(
                     image_data, f"{uuid.uuid4()}.jpg", place["place_id"], storage_client
                 )
-                logging.info("uploaded_image_url", uploaded_image_url)
+                logging.info(f"uploaded_image_url: {uploaded_image_url}")
 
                 image_urls.append(uploaded_image_url)
 
@@ -177,6 +177,23 @@ def find_nearby_restaurants(
 
         save_store_data_to_firestore(store_data, photo_id, user_id, db)
 
+    if store_data is None:
+        # 初期化されていない場合のデフォルト値
+        store_data = StoreData(
+            store_id="",
+            createdAt=datetime.now(),
+            updatedAt=datetime.now(),
+            name="",
+            address="",
+            city="",
+            prefecture="",
+            country="",
+            phoneNumber="",
+            website="",
+            openingHours={},
+            imageUrls=[],
+        )
+
     return store_data
 
 
@@ -184,8 +201,8 @@ def process_image(
     lat: float, lon: float, api_key: str, user_id: str, photo_id: str, db: Any, storage_client: Any
 ):
     try:
-        logging.info("lat", lat)
-        logging.info("lon", lon)
+        logging.info(f"lat: {lat}")
+        logging.info(f"lon: {lon}")
         find_nearby_restaurants(lat, lon, api_key, user_id, photo_id, db, storage_client)
 
     except (AttributeError, KeyError) as e:

@@ -12,7 +12,7 @@ from PIL import Image
 def categorize_from_gemini_api(
     photo_data: bytes,
 ) -> str:
-    logging.info(f"Preparing to categorize from gemini api")
+    logging.info("Preparing to categorize from gemini api")
 
     GOOGLE_API_KEY = "AIzaSyCM1p4Ep_eYimLBX0kpJUeyvu7sE-y42VA"
 
