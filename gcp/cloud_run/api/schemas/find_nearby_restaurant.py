@@ -1,5 +1,6 @@
 # Standard Library
 import logging
+import os
 import uuid
 from datetime import datetime
 from typing import Any, List
@@ -217,11 +218,10 @@ def find_nearby_restaurant(
     db: Any,
     storage_client: Any,
 ) -> dict[str, str]:
-    # 本処理
-    api_key = "AIzaSyA0_ky7Sj1pl8QB_xvzbmebvo1l1JwqL5M"
-    # ここはenvで持たせるように修正
 
-    process_image(lat, lon, api_key, user_id, photo_id, db, storage_client)
+    PLACE_API_KEY = os.getenv("PLACE_API_KEY", "default-place-api-key")
+
+    process_image(lat, lon, PLACE_API_KEY, user_id, photo_id, db, storage_client)
 
     # Firestoreの更新ロジック
     update_user_doc_status(user_id, db)

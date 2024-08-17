@@ -14,9 +14,9 @@ def categorize_from_gemini_api(
 ) -> str:
     logging.info("Preparing to categorize from gemini api")
 
-    GOOGLE_API_KEY = "AIzaSyCM1p4Ep_eYimLBX0kpJUeyvu7sE-y42VA"
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "default-gemini")
 
-    genai.configure(api_key=GOOGLE_API_KEY)
+    genai.configure(api_key=GEMINI_API_KEY)
 
     model = genai.GenerativeModel("gemini-1.5-flash")
 
